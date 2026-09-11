@@ -1,8 +1,11 @@
 package model
 
-type turma struct{
-	ID  int   `json:"id"`
-	QTDALUNOS  int   `json:"qtdAlunos"`
-	ALUNOS  int   `json:"alunos"`
-	SALAS  int   `json:"salas"`
+type Turma struct {
+	ID         int       `json:"id"`
+	Nome       string    `json:"nome"`
+	Disciplina string    `json:"disciplina"`
+	Professor  string    `json:"professor"`
+	Alunos     []int     `json:"alunos"`
+	Alocacao   *Alocacao `json:"alocacao,omitempty"`
+	Ativo      bool      `json:"ativo"`
 }

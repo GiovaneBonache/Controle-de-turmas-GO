@@ -1,7 +1,9 @@
 package model
 
-type aluno struct{
-	ID  int   `json:"id"`
-	NOME  int   `json:"nome"`
-	MATRICULA  int   `json:"matricula"`
+type Aluno struct {
+	ID        int    `json:"id"`
+	Nome      string `json:"nome"`
+	Matricula int    `json:"matricula"`
+	Email     string `json:"email"`
+	Ativo     bool   `json:"ativo"`
 }
