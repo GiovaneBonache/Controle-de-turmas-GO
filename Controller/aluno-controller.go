@@ -1,98 +1,86 @@
 package controller
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
 
+	"github.com/gin-gonic/gin"
 	"seuprojeto/model"
+	"seuprojeto/service"
 )
 
-var alunos []model.Aluno
-var proximoAlunoID = 1
+func ListarAlunos(c *gin.Context) {
+	alunos := service.ListarAlunos()
+	c.JSON(http.StatusOK, alunos)
+}
 
-func HandleAluno(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		listarAluno(w, r)
-	case http.MethodPost:
-		criarAluno(w, r)
-	case http.MethodPut:
-		atualizarAluno(w, r)
-	case http.MethodDelete:
-		excluirAluno(w, r)
-	default:
-		http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
+func BuscarAluno(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"erro": "ID inválido"})
+		return
 	}
+
+	aluno, err := service.BuscarAlunoPorID(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"erro": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, aluno)
 }
 
-func listarAluno(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(alunos)
-}
-
-func criarAluno(w http.ResponseWriter, r *http.Request) {
+func CriarAluno(c *gin.Context) {
 	var aluno model.Aluno
 
-	err := json.NewDecoder(r.Body).Decode(&aluno)
-	if err != nil {
-		http.Error(w, "Dados inválidos", http.StatusBadRequest)
+	if err := c.ShouldBindJSON(&aluno); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"erro": "Dados inválidos"})
 		return
 	}
 
-	aluno.ID = proximoAlunoID
-	proximoAlunoID++
+	alunoCriado, err := service.CriarAluno(aluno)
+	if err != nil {
+		c.JSON(http.StatusConflict, gin.H{"erro": err.Error()})
+		return
+	}
 
-	alunos = append(alunos, aluno)
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(aluno)
+	c.JSON(http.StatusCreated, alunoCriado)
 }
 
-func atualizarAluno(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(r.URL.Query().Get("id"))
+func AtualizarAluno(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		http.Error(w, "ID inválido", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"erro": "ID inválido"})
 		return
 	}
 
-	var alunoAtualizado model.Aluno
+	var aluno model.Aluno
 
-	err = json.NewDecoder(r.Body).Decode(&alunoAtualizado)
-	if err != nil {
-		http.Error(w, "Dados inválidos", http.StatusBadRequest)
+	if err := c.ShouldBindJSON(&aluno); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"erro": "Dados inválidos"})
 		return
 	}
 
-	for i, aluno := range alunos {
-		if aluno.ID == id {
-			alunoAtualizado.ID = id
-			alunos[i] = alunoAtualizado
-
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(alunoAtualizado)
-			return
-		}
+	alunoAtualizado, err := service.AtualizarAluno(id, aluno)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"erro": err.Error()})
+		return
 	}
 
-	http.Error(w, "Aluno não encontrado", http.StatusNotFound)
+	c.JSON(http.StatusOK, alunoAtualizado)
 }
 
-func excluirAluno(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(r.URL.Query().Get("id"))
+func ExcluirAluno(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		http.Error(w, "ID inválido", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"erro": "ID inválido"})
 		return
 	}
 
-	for i, aluno := range alunos {
-		if aluno.ID == id {
-			alunos = append(alunos[:i], alunos[i+1:]...)
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
+	if err := service.ExcluirAluno(id); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"erro": err.Error()})
+		return
 	}
 
-	http.Error(w, "Aluno não encontrado", http.StatusNotFound)
+	c.Status(http.StatusNoContent)
 }
