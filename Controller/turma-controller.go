@@ -1,98 +1,86 @@
 package controller
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
 
+	"github.com/gin-gonic/gin"
 	"seuprojeto/model"
+	"seuprojeto/service"
 )
 
-var turmas []model.Turma
-var proximoTurmaID = 1
+func ListarTurmas(c *gin.Context) {
+	turmas := service.ListarTurmas()
+	c.JSON(http.StatusOK, turmas)
+}
 
-func HandleTurma(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		listarTurma(w, r)
-	case http.MethodPost:
-		criarTurma(w, r)
-	case http.MethodPut:
-		atualizarTurma(w, r)
-	case http.MethodDelete:
-		excluirTurma(w, r)
-	default:
-		http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
+func BuscarTurma(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"erro": "ID inválido"})
+		return
 	}
+
+	turma, err := service.BuscarTurmaPorID(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"erro": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, turma)
 }
 
-func listarTurma(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(turmas)
-}
-
-func criarTurma(w http.ResponseWriter, r *http.Request) {
+func CriarTurma(c *gin.Context) {
 	var turma model.Turma
 
-	err := json.NewDecoder(r.Body).Decode(&turma)
-	if err != nil {
-		http.Error(w, "Dados inválidos", http.StatusBadRequest)
+	if err := c.ShouldBindJSON(&turma); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"erro": "Dados inválidos"})
 		return
 	}
 
-	turma.ID = proximoTurmaID
-	proximoTurmaID++
+	turmaCriada, err := service.CriarTurma(turma)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"erro": err.Error()})
+		return
+	}
 
-	turmas = append(turmas, turma)
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(turma)
+	c.JSON(http.StatusCreated, turmaCriada)
 }
 
-func atualizarTurma(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(r.URL.Query().Get("id"))
+func AtualizarTurma(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		http.Error(w, "ID inválido", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"erro": "ID inválido"})
 		return
 	}
 
-	var turmaAtualizada model.Turma
+	var turma model.Turma
 
-	err = json.NewDecoder(r.Body).Decode(&turmaAtualizada)
-	if err != nil {
-		http.Error(w, "Dados inválidos", http.StatusBadRequest)
+	if err := c.ShouldBindJSON(&turma); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"erro": "Dados inválidos"})
 		return
 	}
 
-	for i, turma := range turmas {
-		if turma.ID == id {
-			turmaAtualizada.ID = id
-			turmas[i] = turmaAtualizada
-
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(turmaAtualizada)
-			return
-		}
+	turmaAtualizada, err := service.AtualizarTurma(id, turma)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"erro": err.Error()})
+		return
 	}
 
-	http.Error(w, "Turma não encontrada", http.StatusNotFound)
+	c.JSON(http.StatusOK, turmaAtualizada)
 }
 
-func excluirTurma(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(r.URL.Query().Get("id"))
+func ExcluirTurma(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		http.Error(w, "ID inválido", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"erro": "ID inválido"})
 		return
 	}
 
-	for i, turma := range turmas {
-		if turma.ID == id {
-			turmas = append(turmas[:i], turmas[i+1:]...)
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
+	if err := service.ExcluirTurma(id); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"erro": err.Error()})
+		return
 	}
 
-	http.Error(w, "Turma não encontrada", http.StatusNotFound)
+	c.Status(http.StatusNoContent)
 }

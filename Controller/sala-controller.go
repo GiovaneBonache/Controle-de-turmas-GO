@@ -1,98 +1,86 @@
 package controller
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
 
+	"github.com/gin-gonic/gin"
 	"seuprojeto/model"
+	"seuprojeto/service"
 )
 
-var salas []model.Sala
-var proximoSalaID = 1
+func ListarSalas(c *gin.Context) {
+	salas := service.ListarSalas()
+	c.JSON(http.StatusOK, salas)
+}
 
-func HandleSala(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		listarSala(w, r)
-	case http.MethodPost:
-		criarSala(w, r)
-	case http.MethodPut:
-		atualizarSala(w, r)
-	case http.MethodDelete:
-		excluirSala(w, r)
-	default:
-		http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
+func BuscarSala(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"erro": "ID inválido"})
+		return
 	}
+
+	sala, err := service.BuscarSalaPorID(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"erro": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, sala)
 }
 
-func listarSala(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(salas)
-}
-
-func criarSala(w http.ResponseWriter, r *http.Request) {
+func CriarSala(c *gin.Context) {
 	var sala model.Sala
 
-	err := json.NewDecoder(r.Body).Decode(&sala)
-	if err != nil {
-		http.Error(w, "Dados inválidos", http.StatusBadRequest)
+	if err := c.ShouldBindJSON(&sala); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"erro": "Dados inválidos"})
 		return
 	}
 
-	sala.ID = proximoSalaID
-	proximoSalaID++
+	salaCriada, err := service.CriarSala(sala)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"erro": err.Error()})
+		return
+	}
 
-	salas = append(salas, sala)
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(sala)
+	c.JSON(http.StatusCreated, salaCriada)
 }
 
-func atualizarSala(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(r.URL.Query().Get("id"))
+func AtualizarSala(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		http.Error(w, "ID inválido", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"erro": "ID inválido"})
 		return
 	}
 
-	var salaAtualizada model.Sala
+	var sala model.Sala
 
-	err = json.NewDecoder(r.Body).Decode(&salaAtualizada)
-	if err != nil {
-		http.Error(w, "Dados inválidos", http.StatusBadRequest)
+	if err := c.ShouldBindJSON(&sala); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"erro": "Dados inválidos"})
 		return
 	}
 
-	for i, sala := range salas {
-		if sala.ID == id {
-			salaAtualizada.ID = id
-			salas[i] = salaAtualizada
-
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(salaAtualizada)
-			return
-		}
+	salaAtualizada, err := service.AtualizarSala(id, sala)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"erro": err.Error()})
+		return
 	}
 
-	http.Error(w, "Sala não encontrada", http.StatusNotFound)
+	c.JSON(http.StatusOK, salaAtualizada)
 }
 
-func excluirSala(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(r.URL.Query().Get("id"))
+func ExcluirSala(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		http.Error(w, "ID inválido", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"erro": "ID inválido"})
 		return
 	}
 
-	for i, sala := range salas {
-		if sala.ID == id {
-			salas = append(salas[:i], salas[i+1:]...)
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
+	if err := service.ExcluirSala(id); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"erro": err.Error()})
+		return
 	}
 
-	http.Error(w, "Sala não encontrada", http.StatusNotFound)
+	c.Status(http.StatusNoContent)
 }
