@@ -4,10 +4,11 @@ import (
 	"errors"
 	"strings"
 
-	"seuprojeto/model"
+	"api-gin/Model"
 )
 
 var salas []model.Sala
+var turmas []model.Turma
 var proximoSalaID = 1
 
 func ListarSalas() []model.Sala {
@@ -75,4 +76,68 @@ func ExcluirSala(id int) error {
 	}
 
 	return errors.New("sala não encontrada")
+}
+func ConsultarGradeSala(salaID int) ([]model.UsoSala, error) {
+	sala, err := BuscarSalaPorID(salaID)
+	if err != nil {
+		return nil, errors.New("sala não encontrada")
+	}
+
+	if !sala.Ativo {
+		return nil, errors.New("sala inativa")
+	}
+
+	var grade []model.UsoSala
+
+	for _, turma := range turmas {
+		if turma.Alocacao != nil && turma.Alocacao.SalaID == salaID {
+			grade = append(grade, model.UsoSala{
+				TurmaID:       turma.ID,
+				TurmaNome:     turma.Nome,
+				DiaSemana:     turma.Alocacao.DiaSemana,
+				HorarioInicio: turma.Alocacao.HorarioInicio,
+				HorarioFim:    turma.Alocacao.HorarioFim,
+			})
+		}
+	}
+
+	return grade, nil
+}
+
+func VerificarDisponibilidadeSala(
+	salaID int,
+	diaSemana string,
+	horarioInicio string,
+	horarioFim string,
+) (bool, error) {
+
+	sala, err := BuscarSalaPorID(salaID)
+	if err != nil {
+		return false, errors.New("sala não encontrada")
+	}
+
+	if !sala.Ativo {
+		return false, errors.New("sala inativa")
+	}
+
+	for _, turma := range turmas {
+		if turma.Alocacao == nil {
+			continue
+		}
+
+		if turma.Alocacao.SalaID != salaID {
+			continue
+		}
+
+		if turma.Alocacao.DiaSemana != diaSemana {
+			continue
+		}
+
+		if horarioInicio < turma.Alocacao.HorarioFim &&
+			horarioFim > turma.Alocacao.HorarioInicio {
+			return false, nil
+		}
+	}
+
+	return true, nil
 }

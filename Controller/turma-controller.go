@@ -1,13 +1,19 @@
 package controller
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"seuprojeto/model"
-	"seuprojeto/service"
+
+	"api-gin/Model"
+	"api-gin/Service"
 )
+
+type MatriculaAlunoDTO struct {
+	AlunoID int `json:"aluno_id"`
+}
 
 func ListarTurmas(c *gin.Context) {
 	turmas := service.ListarTurmas()
@@ -83,4 +89,62 @@ func ExcluirTurma(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
+}
+
+func MatricularAluno(c *gin.Context) {
+	turmaID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"erro": "ID da turma inválido"})
+		return
+	}
+
+	var request MatriculaAlunoDTO
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"erro": "Dados inválidos"})
+		return
+	}
+	if request.AlunoID <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"erro": "aluno_id inválido"})
+		return
+	}
+
+	err = service.MatricularAluno(turmaID, request.AlunoID)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrTurmaNaoEncontrada),
+			errors.Is(err, service.ErrAlunoNaoEncontrado),
+			errors.Is(err, service.ErrSalaAlocadaNaoEncontrada):
+
+			c.JSON(http.StatusNotFound, gin.H{"erro": err.Error()})
+		case errors.Is(err, service.ErrAlunoJaMatriculado):
+
+			c.JSON(http.StatusConflict, gin.H{"erro": err.Error()})
+		case errors.Is(err, service.ErrCapacidadeInsuficiente):
+
+			c.JSON(http.StatusUnprocessableEntity, gin.H{"erro": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"erro": err.Error()})
+		}
+
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"mensagem": "aluno matriculado com sucesso",
+	})
+}
+func ListarAlunosDaTurma(c *gin.Context) {
+	turmaID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"erro": "ID da turma inválido"})
+		return
+	}
+
+	alunos, err := service.ListarAlunosDaTurma(turmaID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"erro": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, alunos)
 }

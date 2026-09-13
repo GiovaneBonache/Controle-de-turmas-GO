@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
+	"api-gin/Controller"
 )
 
 func main() {
@@ -35,12 +37,16 @@ func main() {
 
        	v1.POST("/salas", controller.CriarSala)
        	v1.GET("/salas", controller.ListarSalas)
+       	v1.GET("/salas/:id/grade", controller.ConsultarGradeSala)
+       	v1.GET("/salas/:id/disponibilidade", controller.VerificarDisponibilidadeSala)
        	v1.GET("/salas/:id", controller.BuscarSala)
        	v1.PUT("/salas/:id", controller.AtualizarSala)
        	v1.DELETE("/salas/:id", controller.ExcluirSala)
 
        	v1.POST("/turmas", controller.CriarTurma)
+       	v1.POST("/turmas/:id/alunos", controller.MatricularAluno)
        	v1.GET("/turmas", controller.ListarTurmas)
+        v1.GET("/turmas/:id/alunos", controller.ListarAlunosDaTurma)
        	v1.GET("/turmas/:id", controller.BuscarTurma)
        	v1.PUT("/turmas/:id", controller.AtualizarTurma)
        	v1.DELETE("/turmas/:id", controller.ExcluirTurma)

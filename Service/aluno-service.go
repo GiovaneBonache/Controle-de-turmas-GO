@@ -4,11 +4,19 @@ import (
 	"errors"
 	"strings"
 
-	"seuprojeto/model"
+	"api-gin/Model"
 )
 
 var alunos []model.Aluno
 var proximoAlunoID = 1
+var (
+	ErrTurmaNaoEncontrada       = errors.New("turma não encontrada")
+	ErrAlunoNaoEncontrado       = errors.New("aluno não encontrado")
+	ErrAlunoJaMatriculado       = errors.New("aluno já matriculado na turma")
+	ErrCapacidadeInsuficiente   = errors.New("capacidade insuficiente na sala")
+	ErrConflitoHorarioAluno     = errors.New("aluno possui conflito de horário")
+	ErrSalaAlocadaNaoEncontrada = errors.New("sala alocada não encontrada")
+)
 
 func ListarAlunos() []model.Aluno {
 	return alunos
@@ -95,4 +103,64 @@ func ExcluirAluno(id int) error {
 	}
 
 	return errors.New("aluno não encontrado")
+}
+
+func MatricularAluno(turmaID int, alunoID int) error {
+	turmaIndex := -1
+
+	for i, turma := range turmas {
+		if turma.ID == turmaID {
+			turmaIndex = i
+			break
+		}
+	}
+
+	if turmaIndex == -1 {
+		return ErrTurmaNaoEncontrada
+	}
+
+	_, err := BuscarAlunoPorID(alunoID)
+	if err != nil {
+		return ErrAlunoNaoEncontrado
+	}
+	turma := turmas[turmaIndex]
+
+	for _, id := range turma.Alunos {
+		if id == alunoID {
+			return ErrAlunoJaMatriculado
+		}
+	}
+
+	if turma.Alocacao != nil {
+		sala, err := BuscarSalaPorID(turma.Alocacao.SalaID)
+		if err != nil {
+			return ErrSalaAlocadaNaoEncontrada
+		}
+
+		if len(turma.Alunos)+1 > sala.Capacidade {
+			return ErrCapacidadeInsuficiente
+		}
+	}
+
+	turmas[turmaIndex].Alunos = append(
+		turmas[turmaIndex].Alunos, alunoID,
+	)
+	return nil
+}
+
+func ListarAlunosDaTurma(turmaID int) ([]model.Aluno, error) {
+	turma, err := BuscarTurmaPorID(turmaID)
+	if err != nil {
+		return nil, ErrTurmaNaoEncontrada
+	}
+	alunosDaTurma := []model.Aluno{}
+
+	for _, alunoID := range turma.Alunos {
+		aluno, err := BuscarAlunoPorID(alunoID)
+
+		if err == nil {
+			alunosDaTurma = append(alunosDaTurma, aluno)
+		}
+	}
+	return alunosDaTurma, nil
 }

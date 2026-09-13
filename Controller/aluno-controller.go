@@ -5,8 +5,9 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"seuprojeto/model"
-	"seuprojeto/service"
+
+	"api-gin/Model"
+	"api-gin/Service"
 )
 
 func ListarAlunos(c *gin.Context) {

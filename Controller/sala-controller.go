@@ -5,8 +5,9 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"seuprojeto/model"
-	"seuprojeto/service"
+
+	"api-gin/Model"
+	"api-gin/Service"
 )
 
 func ListarSalas(c *gin.Context) {
@@ -83,4 +84,24 @@ func ExcluirSala(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
+}
+
+func ConsultarGradeSala(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"erro": "ID inválido",
+		})
+		return
+	}
+
+	grade, err := service.ConsultarGradeSala(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"erro": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, grade)
 }
