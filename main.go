@@ -45,6 +45,7 @@ func main() {
 
        	v1.POST("/turmas", controller.CriarTurma)
        	v1.POST("/turmas/:id/alunos", controller.MatricularAluno)
+       	v1.POST("/turmas/:id/alocar", controller.AlocarSala)
        	v1.GET("/turmas", controller.ListarTurmas)
         v1.GET("/turmas/:id/alunos", controller.ListarAlunosDaTurma)
        	v1.GET("/turmas/:id", controller.BuscarTurma)
