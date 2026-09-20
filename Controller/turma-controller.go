@@ -124,7 +124,8 @@ func MatricularAluno(c *gin.Context) {
 			errors.Is(err, service.ErrSalaAlocadaNaoEncontrada):
 
 			c.JSON(http.StatusNotFound, gin.H{"erro": err.Error()})
-		case errors.Is(err, service.ErrAlunoJaMatriculado):
+		case errors.Is(err, service.ErrAlunoJaMatriculado),
+			errors.Is(err, service.ErrConflitoHorarioAluno):
 
 			c.JSON(http.StatusConflict, gin.H{"erro": err.Error()})
 		case errors.Is(err, service.ErrCapacidadeInsuficiente):
@@ -217,6 +218,7 @@ func AlocarSala(c *gin.Context) {
 			})
 
 		case errors.Is(err, service.ErrHorarioInvalido),
+			errors.Is(err, service.ErrDiaSemanaInvalido),
 			errors.Is(err, service.ErrTurmaInativa),
 			errors.Is(err, service.ErrSalaInativa):
 

@@ -8,7 +8,6 @@ import (
 )
 
 var salas []model.Sala
-var turmas []model.Turma
 var proximoSalaID = 1
 
 func ListarSalas() []model.Sala {
@@ -140,31 +139,4 @@ func VerificarDisponibilidadeSala(
 	}
 
 	return true, nil
-}
-
-func ConsultarGradeSala(salaID int) ([]model.UsoSala, error) {
-	sala, err := BuscarSalaPorID(salaID)
-	if err != nil {
-		return nil, errors.New("sala não encontrada")
-	}
-
-	if !sala.Ativo {
-		return nil, errors.New("sala inativa")
-	}
-
-	var grade []model.UsoSala
-
-	for _, turma := range turmas {
-		if turma.Alocacao != nil && turma.Alocacao.SalaID == salaID {
-			grade = append(grade, model.UsoSala{
-				TurmaID:       turma.ID,
-				TurmaNome:     turma.Nome,
-				DiaSemana:     turma.Alocacao.DiaSemana,
-				HorarioInicio: turma.Alocacao.HorarioInicio,
-				HorarioFim:    turma.Alocacao.HorarioFim,
-			})
-		}
-	}
-
-	return grade, nil
 }

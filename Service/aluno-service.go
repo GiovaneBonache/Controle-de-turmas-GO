@@ -140,6 +140,16 @@ func MatricularAluno(turmaID int, alunoID int) error {
 		if len(turma.Alunos)+1 > sala.Capacidade {
 			return ErrCapacidadeInsuficiente
 		}
+
+		if alunoTemConflitoHorario(
+			alunoID,
+			turmaID,
+			turma.Alocacao.DiaSemana,
+			turma.Alocacao.HorarioInicio,
+			turma.Alocacao.HorarioFim,
+		) {
+			return ErrConflitoHorarioAluno
+		}
 	}
 
 	turmas[turmaIndex].Alunos = append(

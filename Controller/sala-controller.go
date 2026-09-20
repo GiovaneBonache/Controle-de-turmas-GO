@@ -105,3 +105,46 @@ func ConsultarGradeSala(c *gin.Context) {
 
 	c.JSON(http.StatusOK, grade)
 }
+
+func VerificarDisponibilidadeSala(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"erro": "ID inválido",
+		})
+		return
+	}
+
+	dia := c.Query("dia")
+	inicio := c.Query("inicio")
+	fim := c.Query("fim")
+
+	if dia == "" || inicio == "" || fim == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"erro": "dia, inicio e fim são obrigatórios",
+		})
+		return
+	}
+
+	disponivel, err := service.VerificarDisponibilidadeSala(
+		id,
+		dia,
+		inicio,
+		fim,
+	)
+
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"erro": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"sala_id":    id,
+		"dia":        dia,
+		"inicio":     inicio,
+		"fim":        fim,
+		"disponivel": disponivel,
+	})
+}

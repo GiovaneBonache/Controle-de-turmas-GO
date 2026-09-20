@@ -12,16 +12,30 @@ var turmas []model.Turma
 var proximoTurmaID = 1
 
 var (
-	ErrSalaNaoEncontrada       = errors.New("sala não encontrada")
-	ErrTurmaInativa            = errors.New("turma inativa")
-	ErrSalaInativa             = errors.New("sala inativa")
-	ErrHorarioInvalido         = errors.New("horário inválido")
-	ErrConflitoSala            = errors.New("sala ocupada nesse horário")
-	ErrConflitoHorarioAluno    = errors.New("aluno possui conflito de horário")
+	ErrSalaNaoEncontrada = errors.New("sala não encontrada")
+	ErrTurmaInativa      = errors.New("turma inativa")
+	ErrSalaInativa       = errors.New("sala inativa")
+	ErrHorarioInvalido   = errors.New("horário inválido")
+	ErrConflitoSala      = errors.New("sala ocupada nesse horário")
+	ErrDiaSemanaInvalido = errors.New("dia da semana inválido")
 )
 
-func ListarTurmas() []model.Turma {
-	return turmas
+func ListarTurmas() []model.TurmaResumo {
+	var resultado []model.TurmaResumo
+
+	for _, turma := range turmas {
+		resultado = append(resultado, model.TurmaResumo{
+			ID:               turma.ID,
+			Nome:             turma.Nome,
+			Disciplina:       turma.Disciplina,
+			Professor:        turma.Professor,
+			QuantidadeAlunos: len(turma.Alunos),
+			Alocada:          turma.Alocacao != nil,
+			Ativo:            turma.Ativo,
+		})
+	}
+
+	return resultado
 }
 
 func BuscarTurmaPorID(id int) (model.Turma, error) {
@@ -50,6 +64,9 @@ func CriarTurma(turma model.Turma) (model.Turma, error) {
 	turma.ID = proximoTurmaID
 	turma.Ativo = true
 
+	turma.Alunos = []int{}
+	turma.Alocacao = nil
+
 	proximoTurmaID++
 
 	turmas = append(turmas, turma)
@@ -72,16 +89,16 @@ func AtualizarTurma(id int, turmaAtualizada model.Turma) (model.Turma, error) {
 
 	for i, turma := range turmas {
 		if turma.ID == id {
-			turmaAtualizada.ID = id
-			turmaAtualizada.Ativo = turma.Ativo
 
-			turmas[i] = turmaAtualizada
+			turmas[i].Nome = turmaAtualizada.Nome
+			turmas[i].Disciplina = turmaAtualizada.Disciplina
+			turmas[i].Professor = turmaAtualizada.Professor
 
-			return turmaAtualizada, nil
+			return turmas[i], nil
 		}
 	}
 
-	return model.Turma{}, errors.New("turma não encontrada")
+	return model.Turma{}, ErrTurmaNaoEncontrada
 }
 
 func ExcluirTurma(id int) error {
@@ -211,6 +228,10 @@ func AlocarSala(
 		return ErrSalaInativa
 	}
 
+	if !validarDiaSemana(diaSemana) {
+		return ErrDiaSemanaInvalido
+	}
+
 	if err := validarHorario(horarioInicio, horarioFim); err != nil {
 		return err
 	}
@@ -270,4 +291,24 @@ func AlocarSala(
 	}
 
 	return nil
+}
+
+func validarDiaSemana(dia string) bool {
+	diasValidos := []string{
+		"segunda",
+		"terca",
+		"quarta",
+		"quinta",
+		"sexta",
+		"sabado",
+		"domingo",
+	}
+
+	for _, diaValido := range diasValidos {
+		if strings.EqualFold(dia, diaValido) {
+			return true
+		}
+	}
+
+	return false
 }
