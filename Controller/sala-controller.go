@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -9,6 +10,12 @@ import (
 	"api-gin/Model"
 	"api-gin/Service"
 )
+
+type CriarSalaRequest struct {
+	Nome       string   `json:"nome"`
+	Capacidade int      `json:"capacidade"`
+	Recursos   []string `json:"recursos"`
+}
 
 func ListarSalas(c *gin.Context) {
 	salas := service.ListarSalas()
@@ -24,7 +31,26 @@ func BuscarSala(c *gin.Context) {
 
 	sala, err := service.BuscarSalaPorID(id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"erro": err.Error()})
+		switch {
+		case errors.Is(err, service.ErrSalaNaoEncontrada):
+			c.JSON(http.StatusNotFound, gin.H{
+				"erro": err.Error(),
+			})
+
+		case errors.Is(err, service.ErrDiaSemanaInvalido),
+			errors.Is(err, service.ErrHorarioInvalido),
+			errors.Is(err, service.ErrSalaInativa):
+
+			c.JSON(http.StatusBadRequest, gin.H{
+				"erro": err.Error(),
+			})
+
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"erro": err.Error(),
+			})
+		}
+
 		return
 	}
 
@@ -32,20 +58,33 @@ func BuscarSala(c *gin.Context) {
 }
 
 func CriarSala(c *gin.Context) {
-	var sala model.Sala
+	var request CriarSalaRequest
 
-	if err := c.ShouldBindJSON(&sala); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"erro": "Dados inválidos"})
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"erro": "dados da sala inválidos",
+		})
 		return
+	}
+
+	sala := model.Sala{
+		Nome:       request.Nome,
+		Capacidade: request.Capacidade,
+		Recursos:   request.Recursos,
 	}
 
 	salaCriada, err := service.CriarSala(sala)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"erro": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"erro": err.Error(),
+		})
 		return
 	}
 
-	c.JSON(http.StatusCreated, salaCriada)
+	c.JSON(http.StatusCreated, gin.H{
+		"mensagem": "sala cadastrada com sucesso",
+		"sala":     salaCriada,
+	})
 }
 
 func AtualizarSala(c *gin.Context) {
@@ -146,5 +185,36 @@ func VerificarDisponibilidadeSala(c *gin.Context) {
 		"inicio":     inicio,
 		"fim":        fim,
 		"disponivel": disponivel,
+	})
+}
+
+func ListarSalasDisponiveis(c *gin.Context) {
+	dia := c.Query("dia")
+	inicio := c.Query("inicio")
+	fim := c.Query("fim")
+
+	if dia == "" || inicio == "" || fim == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"erro": "informe dia, inicio e fim",
+		})
+		return
+	}
+
+	salas, err := service.ListarSalasDisponiveis(
+		dia,
+		inicio,
+		fim,
+	)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"erro": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"quantidade": len(salas),
+		"salas":      salas,
 	})
 }

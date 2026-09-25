@@ -37,6 +37,7 @@ func main() {
 
 		v1.POST("/salas", controller.CriarSala)
 		v1.GET("/salas", controller.ListarSalas)
+		v1.GET("/salas/disponiveis", controller.ListarSalasDisponiveis)
 		v1.GET("/salas/:id/grade", controller.ConsultarGradeSala)
 		v1.GET("/salas/:id/disponibilidade", controller.VerificarDisponibilidadeSala)
 		v1.GET("/salas/:id", controller.BuscarSala)

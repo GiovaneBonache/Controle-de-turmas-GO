@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/Trabalho final Go Ravache.iml" filepath="$PROJECT_DIR$/.idea/Trabalho final Go Ravache.iml" />
+      <module fileurl="file://$PROJECT_DIR$/telas/telas.iml" filepath="$PROJECT_DIR$/telas/telas.iml" />
     </modules>
   </component>
 </project>

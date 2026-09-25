@@ -112,11 +112,19 @@ func VerificarDisponibilidadeSala(
 
 	sala, err := BuscarSalaPorID(salaID)
 	if err != nil {
-		return false, errors.New("sala não encontrada")
+		return false, ErrSalaNaoEncontrada
 	}
 
 	if !sala.Ativo {
-		return false, errors.New("sala inativa")
+		return false, ErrSalaInativa
+	}
+
+	if !validarDiaSemana(diaSemana) {
+		return false, ErrDiaSemanaInvalido
+	}
+
+	if err := validarHorario(horarioInicio, horarioFim); err != nil {
+		return false, err
 	}
 
 	for _, turma := range turmas {
@@ -128,15 +136,62 @@ func VerificarDisponibilidadeSala(
 			continue
 		}
 
-		if turma.Alocacao.DiaSemana != diaSemana {
+		if !strings.EqualFold(
+			turma.Alocacao.DiaSemana,
+			diaSemana,
+		) {
 			continue
 		}
 
-		if horarioInicio < turma.Alocacao.HorarioFim &&
-			horarioFim > turma.Alocacao.HorarioInicio {
+		if horariosSobrepostos(
+			horarioInicio,
+			horarioFim,
+			turma.Alocacao.HorarioInicio,
+			turma.Alocacao.HorarioFim,
+		) {
 			return false, nil
 		}
 	}
 
 	return true, nil
+}
+
+func ListarSalasDisponiveis(
+	diaSemana string,
+	horarioInicio string,
+	horarioFim string,
+) ([]model.Sala, error) {
+
+	if !validarDiaSemana(diaSemana) {
+		return nil, ErrDiaSemanaInvalido
+	}
+
+	if err := validarHorario(horarioInicio, horarioFim); err != nil {
+		return nil, err
+	}
+
+	var disponiveis []model.Sala
+
+	for _, sala := range salas {
+		if !sala.Ativo {
+			continue
+		}
+
+		disponivel, err := VerificarDisponibilidadeSala(
+			sala.ID,
+			diaSemana,
+			horarioInicio,
+			horarioFim,
+		)
+
+		if err != nil {
+			continue
+		}
+
+		if disponivel {
+			disponiveis = append(disponiveis, sala)
+		}
+	}
+
+	return disponiveis, nil
 }
